@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Stealer 탐지 서비스</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #333; }
+        .upload-box { border: 2px dashed #aaa; padding: 30px; text-align: center; border-radius: 8px; }
+        button { background: #4CAF50; color: white; padding: 10px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background: #f2f2f2; }
+        .danger { color: red; font-weight: bold; }
+        .safe { color: green; }
+        .gauge-bar { height: 14px; background: #eee; border-radius: 7px; }
+        .gauge-fill { height: 100%; border-radius: 7px; background: linear-gradient(to right, #4CAF50, #f44336); }
+    </style>
+</head>
+<body>
+    <h1>🔍 Stealer 악성코드 탐지</h1>
+    <div class="upload-box">
+        <p>CSV 파일을 업로드하면 위험 점수를 분석합니다.</p>
+        <input type="file" id="csvFile" accept=".csv">
+        <br><br>
+        <button onclick="uploadFile()">분석 시작</button>
+    </div>
+
+    <div id="resultArea"></div>
+
+    <script>
+        async function uploadFile() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) { alert('파일을 선택해주세요.'); return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('resultArea').innerHTML = '<p>분석 중...</p>';
+
+            const res = await fetch('/predict', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            let html = '<h2>분석 결과</h2><table><tr><th>#</th><th>위험 점수</th><th>게이지</th><th>판정</th></tr>';
+            for (const row of data.results) {
+                const labelClass = row.label === '위험' ? 'danger' : 'safe';
+                html += `<tr>
+                    <td>${row.index + 1}</td>
+                    <td>${row.risk_score}%</td>
+                    <td><div class="gauge-bar"><div class="gauge-fill" style="width:${row.risk_score}%"></div></div></td>
+                    <td class="${labelClass}">${row.label}</td>
+                </tr>`;
+            }
+            html += '</table>';
+            document.getElementById('resultArea').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
