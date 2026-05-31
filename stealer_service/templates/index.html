@@ -1,59 +1,281 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Stealer 탐지 서비스</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
-        h1 { color: #333; }
-        .upload-box { border: 2px dashed #aaa; padding: 30px; text-align: center; border-radius: 8px; }
-        button { background: #4CAF50; color: white; padding: 10px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-        th { background: #f2f2f2; }
-        .danger { color: red; font-weight: bold; }
-        .safe { color: green; }
-        .gauge-bar { height: 14px; background: #eee; border-radius: 7px; }
-        .gauge-fill { height: 100%; border-radius: 7px; background: linear-gradient(to right, #4CAF50, #f44336); }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infostealer Detection Service</title>
+
+```
+<style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family:'Segoe UI', sans-serif;
+    }
+
+    body{
+        background:#f5f7fa;
+        min-height:100vh;
+    }
+
+    .container{
+        max-width:1000px;
+        margin:50px auto;
+        padding:20px;
+    }
+
+    .header{
+        text-align:center;
+        margin-bottom:40px;
+    }
+
+    .header h1{
+        color:#1f2937;
+        font-size:36px;
+        margin-bottom:10px;
+    }
+
+    .header p{
+        color:#6b7280;
+        font-size:16px;
+    }
+
+    .upload-card{
+        background:white;
+        border-radius:16px;
+        padding:40px;
+        box-shadow:0 4px 15px rgba(0,0,0,0.08);
+        text-align:center;
+    }
+
+    .upload-area{
+        border:2px dashed #3b82f6;
+        border-radius:12px;
+        padding:40px;
+        margin-bottom:20px;
+        background:#f8fbff;
+    }
+
+    .upload-area h3{
+        margin-bottom:10px;
+        color:#1f2937;
+    }
+
+    .upload-area p{
+        color:#6b7280;
+    }
+
+    input[type=file]{
+        margin-top:15px;
+    }
+
+    .btn{
+        background:#2563eb;
+        color:white;
+        border:none;
+        padding:12px 30px;
+        border-radius:8px;
+        font-size:16px;
+        cursor:pointer;
+        transition:0.3s;
+    }
+
+    .btn:hover{
+        background:#1d4ed8;
+    }
+
+    .loading{
+        margin-top:20px;
+        color:#2563eb;
+        font-weight:bold;
+    }
+
+    .result-card{
+        margin-top:30px;
+        background:white;
+        border-radius:16px;
+        padding:25px;
+        box-shadow:0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:15px;
+    }
+
+    th{
+        background:#f3f4f6;
+    }
+
+    th, td{
+        border:1px solid #e5e7eb;
+        padding:12px;
+        text-align:center;
+    }
+
+    .safe{
+        color:#16a34a;
+        font-weight:bold;
+    }
+
+    .danger{
+        color:#dc2626;
+        font-weight:bold;
+    }
+
+    .gauge{
+        width:100%;
+        height:14px;
+        background:#e5e7eb;
+        border-radius:20px;
+        overflow:hidden;
+    }
+
+    .gauge-fill{
+        height:100%;
+        background:linear-gradient(
+            90deg,
+            #22c55e 0%,
+            #eab308 50%,
+            #ef4444 100%
+        );
+    }
+
+    .error{
+        color:red;
+        margin-top:20px;
+        font-weight:bold;
+    }
+
+</style>
+```
+
 </head>
 <body>
-    <h1>🔍 Stealer 악성코드 탐지</h1>
-    <div class="upload-box">
-        <p>CSV 파일을 업로드하면 위험 점수를 분석합니다.</p>
+
+<div class="container">
+
+```
+<div class="header">
+    <h1>🔍 Infostealer Detection Service</h1>
+    <p>CSV 파일을 업로드하여 악성코드 위험도를 분석합니다.</p>
+</div>
+
+<div class="upload-card">
+
+    <div class="upload-area">
+        <h3>CSV 파일 업로드</h3>
+        <p>모델이 Infostealer 여부를 분석합니다.</p>
+
         <input type="file" id="csvFile" accept=".csv">
-        <br><br>
-        <button onclick="uploadFile()">분석 시작</button>
     </div>
 
-    <div id="resultArea"></div>
+    <button class="btn" onclick="uploadFile()">
+        분석 시작
+    </button>
 
-    <script>
-        async function uploadFile() {
-            const file = document.getElementById('csvFile').files[0];
-            if (!file) { alert('파일을 선택해주세요.'); return; }
+    <div id="status"></div>
 
-            const formData = new FormData();
-            formData.append('file', file);
+</div>
 
-            document.getElementById('resultArea').innerHTML = '<p>분석 중...</p>';
+<div id="resultArea"></div>
+```
 
-            const res = await fetch('/predict', { method: 'POST', body: formData });
-            const data = await res.json();
+</div>
 
-            let html = '<h2>분석 결과</h2><table><tr><th>#</th><th>위험 점수</th><th>게이지</th><th>판정</th></tr>';
-            for (const row of data.results) {
-                const labelClass = row.label === '위험' ? 'danger' : 'safe';
-                html += `<tr>
-                    <td>${row.index + 1}</td>
-                    <td>${row.risk_score}%</td>
-                    <td><div class="gauge-bar"><div class="gauge-fill" style="width:${row.risk_score}%"></div></div></td>
-                    <td class="${labelClass}">${row.label}</td>
-                </tr>`;
-            }
-            html += '</table>';
-            document.getElementById('resultArea').innerHTML = html;
+<script>
+
+async function uploadFile(){
+
+    const fileInput = document.getElementById("csvFile");
+
+    if(fileInput.files.length === 0){
+        alert("CSV 파일을 선택해주세요.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    document.getElementById("status").innerHTML =
+        '<div class="loading">분석 중...</div>';
+
+    try{
+
+        const response = await fetch("/predict",{
+            method:"POST",
+            body:formData
+        });
+
+        if(!response.ok){
+            throw new Error("서버 오류 : " + response.status);
         }
-    </script>
+
+        const data = await response.json();
+
+        let html = `
+            <div class="result-card">
+                <h2>📊 분석 결과</h2>
+
+                <table>
+                    <tr>
+                        <th>No</th>
+                        <th>위험 점수</th>
+                        <th>위험도</th>
+                        <th>판정</th>
+                    </tr>
+        `;
+
+        data.results.forEach(item => {
+
+            const labelClass =
+                item.label === "위험"
+                ? "danger"
+                : "safe";
+
+            html += `
+                <tr>
+                    <td>${item.index + 1}</td>
+
+                    <td>${item.risk_score}%</td>
+
+                    <td>
+                        <div class="gauge">
+                            <div
+                                class="gauge-fill"
+                                style="width:${item.risk_score}%">
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="${labelClass}">
+                        ${item.label}
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                </table>
+            </div>
+        `;
+
+        document.getElementById("status").innerHTML = "";
+        document.getElementById("resultArea").innerHTML = html;
+
+    }catch(error){
+
+        document.getElementById("status").innerHTML = "";
+
+        document.getElementById("resultArea").innerHTML =
+            `<div class="error">${error.message}</div>`;
+    }
+}
+
+</script>
+
 </body>
 </html>
