@@ -6,52 +6,81 @@ import pandas as pd
 import pickle
 import numpy as np
 import io
+import uvicorn
+from pathlib import Path
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+
+# 현재 main.py가 있는 폴더
+BASE_DIR = Path(__file__).resolve().parent
+
+# templates 폴더 설정
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # 모델 & token2idx 로드
-model = tf.keras.models.load_model("model/stealer_model.keras")
-with open("token2idx.pkl", "rb") as f:
+model = tf.keras.models.load_model(
+    BASE_DIR / "model" / "stealer_model.keras"
+)
+
+with open(BASE_DIR / "token2idx.pkl", "rb") as f:
     token2idx = pickle.load(f)
 
 
-# smart_encode 함수 (Colab과 동일하게)
+# smart_encode 함수
 def smart_encode(val, mapping, max_len=None):
     if isinstance(val, str):
         tokens = val.strip().split()
         encoded = [mapping.get(t, 0) for t in tokens]
+
         if max_len:
-            encoded = encoded[:max_len] + [0] * (max_len - len(encoded))
+            encoded = encoded[:max_len] + [0] * max(0, max_len - len(encoded))
+
         return encoded
+
     return mapping.get(str(val), 0)
 
 
+# 전처리 함수
 def preprocess(df: pd.DataFrame):
-    # ⚠️ Colab 전처리 로직을 여기에 그대로 복붙하세요
-    # 예시:
     X = []
+
     for _, row in df.iterrows():
-        encoded_row = smart_encode(row["your_column"], token2idx)
+        # TODO:
+        # "your_column"을 실제 CSV 컬럼명으로 변경해야 함
+        encoded_row = smart_encode(
+            row["your_column"],
+            token2idx
+        )
+
         X.append(encoded_row)
+
     return np.array(X)
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html"
+    )
 
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     contents = await file.read()
-    df = pd.read_csv(io.BytesIO(contents))
+
+    df = pd.read_csv(
+        io.BytesIO(contents)
+    )
 
     X = preprocess(df)
+
     preds = model.predict(X)
-    scores = (preds[:, 1] * 100).tolist()  # 위험 점수 (%)
+
+    scores = (preds[:, 1] * 100).tolist()
 
     results = []
+
     for i, score in enumerate(scores):
         results.append({
             "index": i,
@@ -59,4 +88,14 @@ async def predict(file: UploadFile = File(...)):
             "label": "위험" if score >= 50 else "정상"
         })
 
-    return {"results": results}
+    return {
+        "results": results
+    }
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "stealer_service.main:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True
+    )
